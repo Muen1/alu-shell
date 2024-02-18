@@ -1,38 +1,34 @@
 #!/usr/bin/env bash
-#
-# Manage the 'manage_my_process' daemon
+#Bash script that creates a subprocess
+. /lib/lsb/init-functions
 
-PROGRAM='manage_my_process'
-RELPATH="${0%/*}/${PROGRAM}"
-PIDFILE="${PIDFILE:-/var/run/my_process.pid}"
-declare -A MESSAGES=( 
-  ['start']='started'
-  ['stop']='stopped'
-  ['restart']='restarted'
-)
+PIDFILE=/var/run/my_process.pid
 
 start() {
-  exec -- "${RELPATH}" &
-  echo "$!" >| "${PIDFILE}"
+    ./manage_my_process &
+    echo "$!" > "$PIDFILE"
 }
 
 stop() {
-  trap '
-    trap RETURN
-    rm -f -- "${PIDFILE}"
-  ' RETURN
-  kill -- "$(< "${PIDFILE}")" 2> /dev/null
+    sudo kill -15 "$(cat "$PIDFILE")" && rm -f "$PIDFILE"
 }
 
-restart() {
-  stop
-  start
-}
+case "$1" in 
+    start)
+       start
+       echo "manage_my_process started"
+       ;;
+    stop)
+       stop
+       echo "manage_my_process stopped"
+       ;;
+    restart)
+       stop
+       start
+       echo "manage_my_process restarted"
+       ;;
+    *)
+       echo "Usage: manage_my_process {start|stop|restart}"
+esac
 
-if (( $# == 1 )) && [[ -v "MESSAGES[$1]" ]]
-then
-  "$1" && printf '%s %s\n' "${PROGRAM}" "${MESSAGES[$1]}"
-else
-  printf 'Usage: %s {start|stop|restart}\n' "${PROGRAM}"
-  exit 1
-fi
+exit 0
